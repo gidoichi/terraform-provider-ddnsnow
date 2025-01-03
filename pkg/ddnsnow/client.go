@@ -25,10 +25,11 @@ type client struct {
 	apiURL     url.URL
 	apiHost    []string
 	apiQuery   url.Values
-	cookie     string
+	uiURL      url.URL
+	uiCookie   string
 }
 
-func NewClient(username, apiToken *string) (*client, error) {
+func NewClient(username, apiToken, passwordHash *string) (*client, error) {
 	apiURL := url.URL{
 		Scheme: "https",
 		Path:   "/update.php",
@@ -39,13 +40,20 @@ func NewClient(username, apiToken *string) (*client, error) {
 		"password": {*apiToken},
 		"format":   {"json"},
 	}
+	uiURL := url.URL{
+		Scheme: "https",
+		Host:   "f5.si",
+		Path:   "/control.php",
+	}
+	uiCookie := fmt.Sprintf("cookie_loginuser=domain%%3D%s%%3Bpassword_hash%%3D%s%%3B", *username, *passwordHash)
 
 	return &client{
 		httpClient: &http.Client{},
 		apiURL:     apiURL,
 		apiHost:    apiHost,
 		apiQuery:   apiQuery,
-		cookie:     "REPLACE_ME",
+		uiURL:      uiURL,
+		uiCookie:   uiCookie,
 	}, nil
 }
 
@@ -101,12 +109,12 @@ func (c *client) handleResponse(resp *http.Response) error {
 }
 
 func (c *client) GetAll() (map[string]string, error) {
-	req, err := http.NewRequest("GET", "https://f5.si/control.php", nil)
+	req, err := http.NewRequest("GET", c.uiURL.String(), nil)
 	if err != nil {
 		return nil, fmt.Errorf("http request construction: %w", err)
 	}
 
-	req.Header.Set("Cookie", c.cookie)
+	req.Header.Set("Cookie", c.uiCookie)
 	resp, err := c.httpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("http request: %w", err)
@@ -229,12 +237,12 @@ func (c *client) DeleteRecord(typ RecordType) error {
 		return fmt.Errorf("unsupported record type: %s", typ)
 	}
 
-	req, err := http.NewRequest("POST", "https://f5.si/control.php", strings.NewReader(values.Encode()))
+	req, err := http.NewRequest("POST", c.uiURL.String(), strings.NewReader(values.Encode()))
 	if err != nil {
 		return fmt.Errorf("http request construction: %w", err)
 	}
 
-	req.Header.Set("Cookie", c.cookie)
+	req.Header.Set("Cookie", c.uiCookie)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 	resp, err := c.httpClient.Do(req)
 	if err != nil {

@@ -37,8 +37,9 @@ type ddnsnowProvider struct {
 
 // ddnsnowProviderModel maps provider schema data to a Go type.
 type ddnsnowProviderModel struct {
-	Username types.String `tfsdk:"username"`
-	APIToken types.String `tfsdk:"apitoken"`
+	Username     types.String `tfsdk:"username"`
+	APIToken     types.String `tfsdk:"apitoken"`
+	PasswordHash types.String `tfsdk:"password_hash"`
 }
 
 // Metadata returns the provider type name.
@@ -55,6 +56,10 @@ func (p *ddnsnowProvider) Schema(_ context.Context, _ provider.SchemaRequest, re
 				Optional: true,
 			},
 			"apitoken": schema.StringAttribute{
+				Optional:  true,
+				Sensitive: true,
+			},
+			"password_hash": schema.StringAttribute{
 				Optional:  true,
 				Sensitive: true,
 			},
@@ -80,7 +85,7 @@ func (p *ddnsnowProvider) Configure(ctx context.Context, req provider.ConfigureR
 			path.Root("username"),
 			"Unknown DDNS Now API Username",
 			"The provider cannot create the DDNS Now API client as there is an unknown configuration value for the DDNS Now username. "+
-				"Either target apply the source of the value first, set the value statically in the configuration.",
+				"Target apply the source of the value first, set the value statically in the configuration.",
 		)
 	}
 
@@ -89,7 +94,16 @@ func (p *ddnsnowProvider) Configure(ctx context.Context, req provider.ConfigureR
 			path.Root("apitoken"),
 			"Unknown DDNS Now API Token",
 			"The provider cannot create the DDNS Now API client as there is an unknown configuration value for the DDNS Now API Token. "+
-				"Either target apply the source of the value first, set the value statically in the configuration.",
+				"Target apply the source of the value first, set the value statically in the configuration.",
+		)
+	}
+
+	if config.PasswordHash.IsUnknown() {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("password_hash"),
+			"Unknown DDNS Now Password Hash",
+			"The provider cannot create the DDNS Now API client as there is an unknown configuration value for the DDNS Now Password Hash. "+
+				"Target apply the source of the value first, set the value statically in the configuration.",
 		)
 	}
 
@@ -97,14 +111,18 @@ func (p *ddnsnowProvider) Configure(ctx context.Context, req provider.ConfigureR
 		return
 	}
 
-	var username, apitoken string
+	var username, apiToken, passwordHash string
 
 	if !config.Username.IsNull() {
 		username = config.Username.ValueString()
 	}
 
 	if !config.APIToken.IsNull() {
-		apitoken = config.APIToken.ValueString()
+		apiToken = config.APIToken.ValueString()
+	}
+
+	if !config.PasswordHash.IsNull() {
+		passwordHash = config.PasswordHash.ValueString()
 	}
 
 	// If any of the expected configurations are missing, return
@@ -120,7 +138,7 @@ func (p *ddnsnowProvider) Configure(ctx context.Context, req provider.ConfigureR
 		)
 	}
 
-	if apitoken == "" {
+	if apiToken == "" {
 		resp.Diagnostics.AddAttributeError(
 			path.Root("password"),
 			"Missing DDNS Now API Token",
@@ -130,12 +148,22 @@ func (p *ddnsnowProvider) Configure(ctx context.Context, req provider.ConfigureR
 		)
 	}
 
+	if apiToken == "" {
+		resp.Diagnostics.AddAttributeError(
+			path.Root("password_hash"),
+			"Missing DDNS Now Password Hash",
+			"The provider cannot create the DDNS Now API client as there is a missing or empty value for the DDNS Now Password Hash. "+
+				"Set the password_hash value in the configuration. "+
+				"If this is already set, ensure the value is not empty.",
+		)
+	}
+
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	// Create a new DDNS Now client using the configuration values
-	client, err := ddnsnow.NewClient(&username, &apitoken)
+	client, err := ddnsnow.NewClient(&username, &apiToken, &passwordHash)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Create DDNS Now API Client",
