@@ -62,7 +62,7 @@ func (r *recordResource) Create(ctx context.Context, req resource.CreateRequest,
 	}
 
 	// Create new record
-	err := r.client.UpdateRecord(record)
+	err := r.client.CreateRecord(record)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error creating record",
@@ -93,8 +93,11 @@ func (r *recordResource) Read(ctx context.Context, req resource.ReadRequest, res
 		return
 	}
 
-	// Get refreshed record value from HashiCups
-	record, err := r.client.GetRecord(ddnsnow.RecordType(state.Type.ValueString()))
+	// Get refreshed record value from DDNS Now
+	record, err := r.client.GetRecord(ddnsnow.Record{
+		Type:  ddnsnow.RecordType(state.Type.ValueString()),
+		Value: state.Value.ValueString(),
+	})
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading DDNS Now Record",
@@ -117,22 +120,34 @@ func (r *recordResource) Read(ctx context.Context, req resource.ReadRequest, res
 
 // Update updates the resource and sets the updated Terraform state on success.
 func (r *recordResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	// Retrieve values from state
+	var state recordResourceModel
+	diags := req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	// Retrieve values from plan
 	var plan recordResourceModel
-	diags := req.Plan.Get(ctx, &plan)
+	diags = req.Plan.Get(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
 	// Generate API request body from plan
-	record := ddnsnow.Record{
+	oldRecord := ddnsnow.Record{
+		Type:  ddnsnow.RecordType(state.Type.ValueString()),
+		Value: state.Value.ValueString(),
+	}
+	newRecord := ddnsnow.Record{
 		Type:  ddnsnow.RecordType(plan.Type.ValueString()),
 		Value: plan.Value.ValueString(),
 	}
 
 	// Update existing record
-	err := r.client.UpdateRecord(record)
+	err := r.client.UpdateRecord(oldRecord, newRecord)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Updating DDNS Now Record",
@@ -143,7 +158,7 @@ func (r *recordResource) Update(ctx context.Context, req resource.UpdateRequest,
 
 	// Fetch updated items from GetRecord as UpdateRecord items are not
 	// populated.
-	record, err = r.client.GetRecord(ddnsnow.RecordType(plan.Type.ValueString()))
+	_, err = r.client.GetRecord(newRecord)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Reading DDNS Now Record",
@@ -152,7 +167,7 @@ func (r *recordResource) Update(ctx context.Context, req resource.UpdateRequest,
 		return
 	}
 
-	// Update resource state with updated items and timestamp
+	// Update resource state with updated record
 	diags = resp.State.Set(ctx, plan)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
@@ -171,7 +186,10 @@ func (r *recordResource) Delete(ctx context.Context, req resource.DeleteRequest,
 	}
 
 	// Delete existing record
-	err := r.client.DeleteRecord(ddnsnow.RecordType(state.Type.ValueString()))
+	err := r.client.DeleteRecord(ddnsnow.Record{
+		Type:  ddnsnow.RecordType(state.Type.ValueString()),
+		Value: state.Value.ValueString(),
+	})
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Error Deleting DDNS Now Record",
