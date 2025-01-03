@@ -39,6 +39,7 @@ type ddnsnowProvider struct {
 type ddnsnowProviderModel struct {
 	Username     types.String `tfsdk:"username"`
 	PasswordHash types.String `tfsdk:"password_hash"`
+	Server       types.String `tfsdk:"server"`
 }
 
 // Metadata returns the provider type name.
@@ -57,6 +58,9 @@ func (p *ddnsnowProvider) Schema(_ context.Context, _ provider.SchemaRequest, re
 			"password_hash": schema.StringAttribute{
 				Optional:  true,
 				Sensitive: true,
+			},
+			"server": schema.StringAttribute{
+				Optional: true,
 			},
 		},
 	}
@@ -97,7 +101,7 @@ func (p *ddnsnowProvider) Configure(ctx context.Context, req provider.ConfigureR
 		return
 	}
 
-	var username, passwordHash string
+	var username, passwordHash, server string
 
 	if !config.Username.IsNull() {
 		username = config.Username.ValueString()
@@ -105,6 +109,10 @@ func (p *ddnsnowProvider) Configure(ctx context.Context, req provider.ConfigureR
 
 	if !config.PasswordHash.IsNull() {
 		passwordHash = config.PasswordHash.ValueString()
+	}
+
+	if !config.Server.IsNull() {
+		server = config.Server.ValueString()
 	}
 
 	// If any of the expected configurations are missing, return
@@ -135,7 +143,7 @@ func (p *ddnsnowProvider) Configure(ctx context.Context, req provider.ConfigureR
 	}
 
 	// Create a new DDNS Now client using the configuration values
-	client, err := ddnsnow.NewClient(&username, &passwordHash)
+	client, err := ddnsnow.NewClient(&username, &passwordHash, &server)
 	if err != nil {
 		resp.Diagnostics.AddError(
 			"Unable to Create DDNS Now API Client",

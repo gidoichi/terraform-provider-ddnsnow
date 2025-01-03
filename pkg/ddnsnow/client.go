@@ -1,9 +1,7 @@
 package ddnsnow
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -24,17 +22,27 @@ type client struct {
 	uiCookie   string
 }
 
-func NewClient(username, passwordHash *string) (*client, error) {
-	uiURL := url.URL{
-		Scheme: "https",
-		Host:   "f5.si",
-		Path:   "/control.php",
+func NewClient(username, passwordHash, server *string) (*client, error) {
+	var err error
+	var uiURL *url.URL
+	if *server != "" {
+		uiURL, err = url.Parse(*server)
+		if err != nil {
+			return nil, fmt.Errorf("server URL parsing: %w", err)
+		}
+	} else {
+		uiURL = &url.URL{
+			Scheme: "https",
+			Host:   "f5.si",
+		}
 	}
+	uiURL.Path = "/control.php"
+
 	uiCookie := fmt.Sprintf("cookie_loginuser=domain%%3D%s%%3Bpassword_hash%%3D%s%%3B", *username, *passwordHash)
 
 	return &client{
 		httpClient: &http.Client{},
-		uiURL:      uiURL,
+		uiURL:      *uiURL,
 		uiCookie:   uiCookie,
 	}, nil
 }
@@ -58,26 +66,7 @@ func (c *client) queryUI(body url.Values) error {
 		return fmt.Errorf("http request: %w", err)
 	}
 
-	return c.handleResponse(resp)
-}
-
-func (c *client) handleResponse(resp *http.Response) error {
-	defer resp.Body.Close()
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("read body: %w", err)
-	}
-
-	var ddnsNowResp ddnsNowResponse
-	if err := json.Unmarshal(body, &ddnsNowResp); err != nil {
-		return fmt.Errorf("unmarshal body: %w", err)
-	}
-	if ddnsNowResult(ddnsNowResp.Result) == ddnsNowResultNG {
-		return fmt.Errorf("ddnsnow: code=%d, msg=%s", ddnsNowResp.ErrorCode, ddnsNowResp.ErrorMsg)
-	}
-
-	return nil
+	return handleResponse(resp)
 }
 
 func (c *client) GetSettings() (*settings, error) {
