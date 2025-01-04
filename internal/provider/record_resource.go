@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package provider
 
 import (
@@ -36,10 +39,12 @@ func (r *recordResource) Schema(_ context.Context, _ resource.SchemaRequest, res
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"type": schema.StringAttribute{
-				Required: true,
+				Description: "The record type. One of: `A`, `AAAA`, `CNAME`, `TXT`, `NS`.",
+				Required:    true,
 			},
 			"value": schema.StringAttribute{
-				Required: true,
+				Description: "The record value.",
+				Required:    true,
 			},
 		},
 	}

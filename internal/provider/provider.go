@@ -1,3 +1,6 @@
+// Copyright (c) HashiCorp, Inc.
+// SPDX-License-Identifier: MPL-2.0
+
 package provider
 
 import (
@@ -53,14 +56,17 @@ func (p *ddnsnowProvider) Schema(_ context.Context, _ provider.SchemaRequest, re
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"username": schema.StringAttribute{
-				Optional: true,
+				Description: "The DDNS Now username. Also known as a subdomain of 'f5.si'.",
+				Optional:    true,
 			},
 			"password_hash": schema.StringAttribute{
-				Optional:  true,
-				Sensitive: true,
+				Description: "The DDNS Now password hash. This is contained inside the cookie_loginuser key in the HTTP Cookie.",
+				Optional:    true,
+				Sensitive:   true,
 			},
 			"server": schema.StringAttribute{
-				Optional: true,
+				Description: "The domain of the DDNS Now server. Defaults to 'f5.si'. This attribute is used for testing purposes.",
+				Optional:    true,
 			},
 		},
 	}
