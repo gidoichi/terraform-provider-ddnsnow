@@ -124,6 +124,17 @@ func (s *settings) removeRecord(record Record) {
 
 func (s *settings) addRecord(record Record) error {
 	switch record.Type {
+	case RecordTypeA, RecordTypeAAAA, RecordTypeTXT:
+		if len(s.Records[RecordTypeCNAME]) > 0 {
+			return fmt.Errorf("CNAME record already exists")
+		}
+	case RecordTypeCNAME:
+		if len(s.Records[RecordTypeA]) > 0 || len(s.Records[RecordTypeAAAA]) > 0 || len(s.Records[RecordTypeTXT]) > 0 {
+			return fmt.Errorf("A/AAAA/TXT record already exists")
+		}
+	}
+
+	switch record.Type {
 	case RecordTypeA, RecordTypeAAAA, RecordTypeCNAME:
 		if len(s.Records[record.Type]) == 0 {
 			s.Records[record.Type] = []string{record.Value}
