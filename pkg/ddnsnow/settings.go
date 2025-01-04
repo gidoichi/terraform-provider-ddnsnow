@@ -108,21 +108,31 @@ func (s *settings) getRecord(record Record) (Record, error) {
 	}
 }
 
-func (s *settings) removeRecord(record Record) {
+func (s *settings) removeRecord(record Record) error {
 	switch record.Type {
 	case RecordTypeA, RecordTypeAAAA, RecordTypeCNAME:
+		if len(s.Records[record.Type]) != 1 {
+			return fmt.Errorf("record not found: %s", record)
+		}
 		delete(s.Records, record.Type)
 
 	case RecordTypeNS, RecordTypeTXT:
 		records := s.Records[record.Type]
+		var removed uint
 		for i, r := range records {
 			if r == record.Value {
 				records = append(records[:i], records[i+1:]...)
+				removed++
 				break
 			}
 		}
+		if removed == 0 {
+			return fmt.Errorf("record not found: %s", record)
+		}
 		s.Records[record.Type] = records
 	}
+
+	return nil
 }
 
 func (s *settings) addRecord(record Record) error {

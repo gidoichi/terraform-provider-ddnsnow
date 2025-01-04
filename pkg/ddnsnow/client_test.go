@@ -247,3 +247,27 @@ func TestClientDeleteRecord(t *testing.T) {
 		t.Fatalf("CreateRecord: %v", err)
 	}
 }
+
+func TestClientDeleteRecordFailsWhenRecordDoesNotExist(t *testing.T) {
+	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			w.Write([]byte(`<html><input type="text" id="update_data_a" value="127.0.0.1"></html>`))
+		}
+	}))
+	defer testServer.Close()
+	server := testServer.URL
+
+	client, err := ddnsnow.NewClient(&domain, &passwordHash, &server)
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+
+	record := ddnsnow.Record{
+		Type:  ddnsnow.RecordTypeAAAA,
+		Value: "::1",
+	}
+	if err := client.DeleteRecord(record); err == nil {
+		t.Fatalf("CreateRecord: expected error, got nil")
+	}
+}

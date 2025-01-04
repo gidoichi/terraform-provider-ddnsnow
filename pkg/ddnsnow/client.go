@@ -120,7 +120,9 @@ func (c *client) UpdateRecord(oldRecord, newRecord Record) error {
 		return err
 	}
 
-	settings.removeRecord(oldRecord)
+	if err := settings.removeRecord(oldRecord); err != nil {
+		return err
+	}
 	if err := settings.addRecord(newRecord); err != nil {
 		return err
 	}
@@ -134,7 +136,9 @@ func (c *client) DeleteRecord(record Record) error {
 		return err
 	}
 
-	settings.removeRecord(record)
+	if err := settings.removeRecord(record); err != nil {
+		return err
+	}
 
 	return c.queryUI(settings.values())
 }
