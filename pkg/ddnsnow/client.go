@@ -86,7 +86,12 @@ func (c *client) GetSettings() (*settings, error) {
 }
 
 func (c *client) GetRecord(record Record) (Record, error) {
-	return record, nil
+	settings, err := c.GetSettings()
+	if err != nil {
+		return Record{}, err
+	}
+
+	return settings.getRecord(record)
 }
 
 func (c *client) CreateRecord(record Record) error {

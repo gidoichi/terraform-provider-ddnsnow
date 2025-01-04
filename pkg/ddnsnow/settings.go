@@ -78,6 +78,33 @@ func parseSettings(r io.Reader) (*settings, error) {
 	return &settings, nil
 }
 
+func (s *settings) getRecord(record Record) (Record, error) {
+	records := s.Records[record.Type]
+
+	switch record.Type {
+	case RecordTypeA, RecordTypeAAAA, RecordTypeCNAME:
+		if len(records) == 0 {
+			return Record{}, fmt.Errorf("record not found: %s", record.Type)
+		}
+		return Record{
+			Type:  record.Type,
+			Value: s.Records[record.Type][0],
+		}, nil
+
+	case RecordTypeNS, RecordTypeTXT:
+		records := s.Records[record.Type]
+		for _, r := range records {
+			if r == record.Value {
+				return record, nil
+			}
+		}
+		return Record{}, fmt.Errorf("record not found: %s", record)
+
+	default:
+		return Record{}, fmt.Errorf("unsupported record type: %s", record.Type)
+	}
+}
+
 func (s *settings) removeRecord(record Record) {
 	switch record.Type {
 	case RecordTypeA, RecordTypeAAAA, RecordTypeCNAME:

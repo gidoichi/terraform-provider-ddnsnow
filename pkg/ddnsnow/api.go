@@ -33,7 +33,7 @@ func handleResponse(resp *http.Response) error {
 	if err := json.Unmarshal(body, &ddnsNowResp); err != nil {
 		return fmt.Errorf("unmarshal body: %w", err)
 	}
-	if ddnsNowResult(ddnsNowResp.Result) == ddnsNowResultNG {
+	if ddnsNowResult(ddnsNowResp.Result) != ddnsNowResultOK {
 		return fmt.Errorf("ddnsnow: code=%d, msg=%s", ddnsNowResp.ErrorCode, ddnsNowResp.ErrorMsg)
 	}
 
