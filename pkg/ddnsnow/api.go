@@ -20,8 +20,8 @@ type ddnsNowResponse struct {
 type ddnsNowResult string
 
 var (
-	ddnsNowResultOK ddnsNowResult = "OK"
-	ddnsNowResultNG ddnsNowResult = "NG"
+	DDNSNowResultOK ddnsNowResult = "OK"
+	DDNSNowResultNG ddnsNowResult = "NG"
 )
 
 func handleResponse(resp *http.Response) error {
@@ -36,7 +36,7 @@ func handleResponse(resp *http.Response) error {
 	if err := json.Unmarshal(body, &ddnsNowResp); err != nil {
 		return fmt.Errorf("unmarshal body: %w", err)
 	}
-	if ddnsNowResult(ddnsNowResp.Result) != ddnsNowResultOK {
+	if ddnsNowResult(ddnsNowResp.Result) != DDNSNowResultOK {
 		return fmt.Errorf("ddnsnow: code=%d, msg=%s", ddnsNowResp.ErrorCode, ddnsNowResp.ErrorMsg)
 	}
 

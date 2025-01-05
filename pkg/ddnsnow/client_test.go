@@ -21,12 +21,15 @@ func TestClientGetSettings(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			w.Write([]byte(`<html>
+			_, err := w.Write([]byte(`<html>
 <input type="text" id="update_data_a" value="127.0.0.1">
 <textarea id="update_data_txt">record1
 record2</textarea>
 <input type="checkbox" id="update_data_wildcard" checked>
 </html>`))
+			if err != nil {
+				t.Fatalf("Write: %v", err)
+			}
 		}
 	}))
 	defer testServer.Close()
@@ -60,7 +63,10 @@ func TestClientGetRecord(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			w.Write([]byte(`<html><input type="text" id="update_data_a" value="127.0.0.1"></html>`))
+			_, err := w.Write([]byte(`<html><input type="text" id="update_data_a" value="127.0.0.1"></html>`))
+			if err != nil {
+				t.Fatalf("Write: %v", err)
+			}
 		}
 	}))
 	defer testServer.Close()
@@ -88,29 +94,33 @@ func TestClientCreateRecord(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			w.Write([]byte(`<html><input type="text" id="update_data_a" value="127.0.0.1"></html>`))
+			_, err := w.Write([]byte(`<html><input type="text" id="update_data_a" value="127.0.0.1"></html>`))
+			if err != nil {
+				t.Fatalf("Write: %v", err)
+			}
 		case http.MethodPost:
 			defer r.Body.Close()
 			var body []byte
 			var err error
 			if body, err = io.ReadAll(r.Body); err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				return
+				t.Fatalf("ReadAll: %v", err)
 			}
 
 			values, err := url.ParseQuery(string(body))
 			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				return
+				t.Fatalf("ParseQuery: %v", err)
 			}
 			if values.Get("action") != "update" ||
 				values.Get("json") != "1" ||
 				values.Get("update_data_a") != "127.0.0.1" ||
 				values.Get("update_data_aaaa") != "::1" {
-				w.WriteHeader(http.StatusInternalServerError)
-				return
+				t.Fatalf("unexpected values: %v", values)
 			}
-			w.Write([]byte(`{"result":"OK"}`))
+
+			_, err = w.Write([]byte(`{"result":"OK"}`))
+			if err != nil {
+				t.Fatalf("Write: %v", err)
+			}
 		}
 	}))
 	defer testServer.Close()
@@ -134,7 +144,10 @@ func TestClientCreateRecordFailsWithConflictedRecordExists(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			w.Write([]byte(`<html><input type="text" id="update_data_a" value="127.0.0.1"></html>`))
+			_, err := w.Write([]byte(`<html><input type="text" id="update_data_a" value="127.0.0.1"></html>`))
+			if err != nil {
+				t.Fatalf("Write: %v", err)
+			}
 		}
 	}))
 	defer testServer.Close()
@@ -158,28 +171,32 @@ func TestClientUpdateRecord(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			w.Write([]byte(`<html><input type="text" id="update_data_a" value="127.0.0.1"></html>`))
+			_, err := w.Write([]byte(`<html><input type="text" id="update_data_a" value="127.0.0.1"></html>`))
+			if err != nil {
+				t.Fatalf("Write: %v", err)
+			}
 		case http.MethodPost:
 			defer r.Body.Close()
 			var body []byte
 			var err error
 			if body, err = io.ReadAll(r.Body); err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				return
+				t.Fatalf("ReadAll: %v", err)
 			}
 
 			values, err := url.ParseQuery(string(body))
 			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				return
+				t.Fatalf("ParseQuery: %v", err)
 			}
 			if values.Get("action") != "update" ||
 				values.Get("json") != "1" ||
 				values.Get("update_data_a") != "127.0.0.2" {
-				w.WriteHeader(http.StatusInternalServerError)
-				return
+				t.Fatalf("unexpected values: %v", values)
 			}
-			w.Write([]byte(`{"result":"OK"}`))
+
+			_, err = w.Write([]byte(`{"result":"OK"}`))
+			if err != nil {
+				t.Fatalf("Write: %v", err)
+			}
 		}
 	}))
 	defer testServer.Close()
@@ -207,28 +224,32 @@ func TestClientDeleteRecord(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			w.Write([]byte(`<html><input type="text" id="update_data_a" value="127.0.0.1"></html>`))
+			_, err := w.Write([]byte(`<html><input type="text" id="update_data_a" value="127.0.0.1"></html>`))
+			if err != nil {
+				t.Fatalf("Write: %v", err)
+			}
 		case http.MethodPost:
 			defer r.Body.Close()
 			var body []byte
 			var err error
 			if body, err = io.ReadAll(r.Body); err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				return
+				t.Fatalf("ReadAll: %v", err)
 			}
 
 			values, err := url.ParseQuery(string(body))
 			if err != nil {
-				w.WriteHeader(http.StatusInternalServerError)
-				return
+				t.Fatalf("ParseQuery: %v", err)
 			}
 			if values.Get("action") != "update" ||
 				values.Get("json") != "1" ||
 				values.Get("update_data_a") != "" {
-				w.WriteHeader(http.StatusInternalServerError)
-				return
+				t.Fatalf("unexpected values: %v", values)
 			}
-			w.Write([]byte(`{"result":"OK"}`))
+
+			_, err = w.Write([]byte(`{"result":"OK"}`))
+			if err != nil {
+				t.Fatalf("Write: %v", err)
+			}
 		}
 	}))
 	defer testServer.Close()
@@ -252,7 +273,10 @@ func TestClientDeleteRecordFailsWhenRecordDoesNotExist(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			w.Write([]byte(`<html><input type="text" id="update_data_a" value="127.0.0.1"></html>`))
+			_, err := w.Write([]byte(`<html><input type="text" id="update_data_a" value="127.0.0.1"></html>`))
+			if err != nil {
+				t.Fatalf("Write: %v", err)
+			}
 		}
 	}))
 	defer testServer.Close()

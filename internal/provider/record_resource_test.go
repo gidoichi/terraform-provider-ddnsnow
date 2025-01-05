@@ -16,9 +16,13 @@ func TestAccRecordResource(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			w.Write([]byte(`<html></html>`))
+			if _, err := w.Write([]byte(`<html></html>`)); err != nil {
+				t.Fatalf("Write: %v", err)
+			}
 		case http.MethodPost:
-			w.Write([]byte(`{"result":"OK"}`))
+			if _, err := w.Write([]byte(`{"result":"OK"}`)); err != nil {
+				t.Fatalf("Write: %v", err)
+			}
 		}
 	}))
 
