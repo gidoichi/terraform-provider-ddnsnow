@@ -29,7 +29,7 @@ func main() {
 	flag.Parse()
 
 	opts := providerserver.ServeOpts{
-		Address: "hashicorp.com/edu/ddnsnow",
+		Address: "registry.terraform.io/gidoichi/ddnsnow",
 		Debug:   debug,
 	}
 

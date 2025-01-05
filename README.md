@@ -33,7 +33,7 @@ Then commit the changes to `go.mod` and `go.sum`.
 
 ## Using the provider
 
-Fill this in for each provider
+See [Docs overview | gidoichi/ddnsnow | Terraform | Terraform Registry](https://registry.terraform.io/providers/gidoichi/ddnsnow/latest/docs)
 
 ## Developing the Provider
 
