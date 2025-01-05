@@ -16,7 +16,7 @@ func TestAccRecordResource(t *testing.T) {
 	testServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
 		case http.MethodGet:
-			if _, err := w.Write([]byte(`<html></html>`)); err != nil {
+			if _, err := w.Write([]byte(`<html><textarea id="update_data_txt">dummy</textarea></html>`)); err != nil {
 				t.Fatalf("Write: %v", err)
 			}
 		case http.MethodPost:
@@ -33,26 +33,26 @@ func TestAccRecordResource(t *testing.T) {
 			{
 				Config: fmt.Sprintf(providerConfigTpl, testServer.URL) + `
 resource "ddnsnow_record" "test" {
-  type  = "A"
-  value = "127.0.0.1"
+  type  = "TXT"
+  value = "dummy"
 }
 `,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("ddnsnow_record.test", "type", "A"),
-					resource.TestCheckResourceAttr("ddnsnow_record.test", "value", "127.0.0.1"),
+					resource.TestCheckResourceAttr("ddnsnow_record.test", "type", "TXT"),
+					resource.TestCheckResourceAttr("ddnsnow_record.test", "value", "dummy"),
 				),
 			},
 			// Update and Read testing
 			{
 				Config: fmt.Sprintf(providerConfigTpl, testServer.URL) + `
 resource "ddnsnow_record" "test" {
-  type  = "A"
-  value = "127.0.0.2"
+  type  = "TXT"
+  value = "dummy"
 }
 `,
 				Check: resource.ComposeAggregateTestCheckFunc(
-					resource.TestCheckResourceAttr("ddnsnow_record.test", "type", "A"),
-					resource.TestCheckResourceAttr("ddnsnow_record.test", "value", "127.0.0.2"),
+					resource.TestCheckResourceAttr("ddnsnow_record.test", "type", "TXT"),
+					resource.TestCheckResourceAttr("ddnsnow_record.test", "value", "dummy"),
 				),
 			},
 			// Delete testing automatically occurs in TestCase
