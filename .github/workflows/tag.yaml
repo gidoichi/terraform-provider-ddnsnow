@@ -1,0 +1,14 @@
+name: Increment version
+on:
+  push:
+    branches: ["main"]
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    if: "contains(github.event.head_commit.message, '[update:patch]')"
+    steps:
+      - uses: actions/checkout@v4
+      - name: Bump version and push tag
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GH_PAT_FOR_CREATE_PULL_REQUEST_ACTION }}
