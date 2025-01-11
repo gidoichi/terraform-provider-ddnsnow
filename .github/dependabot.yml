@@ -6,10 +6,9 @@ updates:
     directory: "/"
     schedule:
       interval: "daily"
+    commit-message:
+      prefix: "[update:patch] "
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "daily"
-    # TODO: Dependabot only updates hashicorp GHAs in the template repository, the following lines can be removed for consumers of this template
-    allow:
-      - dependency-name: "hashicorp/*"
