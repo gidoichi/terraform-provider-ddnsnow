@@ -19,7 +19,10 @@ jobs:
       - id: head-commit
         run: |
           set -x
-          echo "message=$(git show --no-patch --format=%B | head -n 1)" >> "$GITHUB_OUTPUT"
+          delimiter="$(openssl rand -hex 8)"
+          echo "message<<$delimiter" >> "$GITHUB_OUTPUT"
+          echo "$(git show --no-patch --format=%B)" >> "$GITHUB_OUTPUT"
+          echo "$delimiter" >> "$GITHUB_OUTPUT"
           echo "commits=$(git rev-list ${{ steps.latest-tag.outputs.previous_tag }}..HEAD --count)" >> "$GITHUB_OUTPUT"
       - name: Bump version and push tag
         if: contains(steps.head-commit.outputs.message, '[update:patch]') && steps.head-commit.outputs.commits != '0'
