@@ -40,22 +40,30 @@ record2</textarea>
 		t.Fatalf("NewClient: %v", err)
 	}
 
-	settings, err := client.GetSettings()
+	actual, err := client.GetSettings()
 	if err != nil {
 		t.Fatalf("GetSettings: %v", err)
 	}
 
-	if settings.Records[ddnsnow.RecordTypeA][0] != "127.0.0.1" {
-		t.Fatalf("unexpected record value: %s", settings.Records[ddnsnow.RecordTypeA][0])
+	expectedRecords := []ddnsnow.Record{
+		{Type: ddnsnow.RecordTypeA, Value: "127.0.0.1"},
+		{Type: ddnsnow.RecordTypeTXT, Value: "record1"},
+		{Type: ddnsnow.RecordTypeTXT, Value: "record2"},
 	}
-	if settings.Records[ddnsnow.RecordTypeTXT][0] != "record1" {
-		t.Fatalf("unexpected record value: %s", settings.Records[ddnsnow.RecordTypeTXT][0])
+	if len(actual.Records) != len(expectedRecords) {
+		t.Fatalf("unexpected number of records: %d", len(actual.Records))
 	}
-	if settings.Records[ddnsnow.RecordTypeTXT][1] != "record2" {
-		t.Fatalf("unexpected record value: %s", settings.Records[ddnsnow.RecordTypeTXT][1])
+	if actual.Records[0] != expectedRecords[0] {
+		t.Fatalf("unexpected record value: %s", actual.Records[0])
 	}
-	if settings.EnableWildcard != true {
-		t.Fatalf("unexpected wildcard value: %t", settings.EnableWildcard)
+	if actual.Records[1] != expectedRecords[1] {
+		t.Fatalf("unexpected record value: %s", actual.Records[1])
+	}
+	if actual.Records[2] != expectedRecords[2] {
+		t.Fatalf("unexpected record value: %s", actual.Records[2])
+	}
+	if actual.EnableWildcard != true {
+		t.Fatalf("unexpected wildcard value: %t", actual.EnableWildcard)
 	}
 }
 
@@ -81,12 +89,12 @@ func TestClientGetRecord(t *testing.T) {
 		Type:  ddnsnow.RecordTypeA,
 		Value: "127.0.0.1",
 	}
-	r, err := client.GetRecord(record)
+	actual, err := client.GetRecord(record)
 	if err != nil {
 		t.Fatalf("CreateRecord: %v", err)
 	}
-	if r != record {
-		t.Fatalf("unexpected record: %v", r)
+	if actual != record {
+		t.Fatalf("unexpected record: %v", actual)
 	}
 }
 

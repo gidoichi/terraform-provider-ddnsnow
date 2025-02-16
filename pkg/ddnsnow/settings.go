@@ -13,7 +13,7 @@ import (
 )
 
 type settings struct {
-	Records        map[RecordType][]string
+	Records        Records
 	EnableWildcard bool
 }
 
@@ -23,9 +23,7 @@ func ParseSettings(r io.Reader) (*settings, error) {
 		return nil, fmt.Errorf("parse html: %w", err)
 	}
 
-	settings := settings{
-		Records: map[RecordType][]string{},
-	}
+	var settings settings
 	for node := range doc.Descendants() {
 		if node.Type != html.ElementNode {
 			continue
@@ -62,19 +60,23 @@ func ParseSettings(r io.Reader) (*settings, error) {
 			recordType = RecordTypeNS
 		}
 
+		var values []string
 		switch key {
 		case "update_data_a", "update_data_aaaa", "update_data_cname":
-			if attributes["value"] == "" {
-				settings.Records[recordType] = []string{}
-			} else {
-				settings.Records[recordType] = []string{attributes["value"]}
+			if attributes["value"] != "" {
+				values = []string{attributes["value"]}
 			}
 		case "update_data_txt", "update_data_ns":
-			if node.FirstChild == nil || node.FirstChild.Data == "" {
-				settings.Records[recordType] = []string{}
-			} else {
-				settings.Records[recordType] = strings.Split(node.FirstChild.Data, "\n")
+			if node.FirstChild != nil && node.FirstChild.Data != "" {
+				values = strings.Split(node.FirstChild.Data, "\n")
 			}
+		}
+
+		for _, value := range values {
+			settings.Records = append(settings.Records, Record{
+				Type:  recordType,
+				Value: value,
+			})
 		}
 	}
 
@@ -82,55 +84,28 @@ func ParseSettings(r io.Reader) (*settings, error) {
 }
 
 func (s *settings) GetRecord(record Record) (Record, error) {
-	records := s.Records[record.Type]
-
+	var filter func(Record) bool
 	switch record.Type {
 	case RecordTypeA, RecordTypeAAAA, RecordTypeCNAME:
-		if len(records) == 0 {
-			return Record{}, fmt.Errorf("record not found: %s", record.Type)
+		filter = func(r Record) bool {
+			return r.Type == record.Type
 		}
-		return Record{
-			Type:  record.Type,
-			Value: s.Records[record.Type][0],
-		}, nil
-
 	case RecordTypeNS, RecordTypeTXT:
-		records := s.Records[record.Type]
-		for _, r := range records {
-			if r == record.Value {
-				return record, nil
-			}
+		filter = func(r Record) bool {
+			return r.Type == record.Type && r.Value == record.Value
 		}
-		return Record{}, fmt.Errorf("record not found: %s", record)
-
-	default:
-		return Record{}, fmt.Errorf("unsupported record type: %s", record.Type)
 	}
+
+	return s.Records.GetOne(filter)
 }
 
 func (s *settings) RemoveRecord(record Record) error {
-	switch record.Type {
-	case RecordTypeA, RecordTypeAAAA, RecordTypeCNAME:
-		if len(s.Records[record.Type]) != 1 {
-			return fmt.Errorf("record not found: %s", record)
-		}
-		delete(s.Records, record.Type)
-
-	case RecordTypeNS, RecordTypeTXT:
-		records := s.Records[record.Type]
-		var removed uint
-		for i, r := range records {
-			if r == record.Value {
-				records = append(records[:i], records[i+1:]...)
-				removed++
-				break
-			}
-		}
-		if removed == 0 {
-			return fmt.Errorf("record not found: %s", record)
-		}
-		s.Records[record.Type] = records
+	records, err := s.Records.RemoveOne(record)
+	if err != nil {
+		return fmt.Errorf("remove record: %w", err)
 	}
+
+	s.Records = records
 
 	return nil
 }
@@ -138,26 +113,35 @@ func (s *settings) RemoveRecord(record Record) error {
 func (s *settings) AddRecord(record Record) error {
 	switch record.Type {
 	case RecordTypeA, RecordTypeAAAA, RecordTypeTXT:
-		if len(s.Records[RecordTypeCNAME]) > 0 {
+		records := s.Records.Filter(func(r Record) bool {
+			return r.Type == RecordTypeCNAME
+		})
+		if len(records) > 0 {
 			return fmt.Errorf("CNAME record already exists")
 		}
+
 	case RecordTypeCNAME:
-		if len(s.Records[RecordTypeA]) > 0 || len(s.Records[RecordTypeAAAA]) > 0 || len(s.Records[RecordTypeTXT]) > 0 {
+		records := s.Records.Filter(func(r Record) bool {
+			return r.Type == RecordTypeA || r.Type == RecordTypeAAAA || r.Type == RecordTypeTXT
+		})
+		if len(records) > 0 {
 			return fmt.Errorf("A/AAAA/TXT record already exists")
 		}
 	}
 
 	switch record.Type {
 	case RecordTypeA, RecordTypeAAAA, RecordTypeCNAME:
-		if len(s.Records[record.Type]) == 0 {
-			s.Records[record.Type] = []string{record.Value}
-		} else {
+		exists := s.Records.Filter(func(r Record) bool {
+			return r.Type == record.Type
+		})
+		if len(exists) != 0 {
 			return fmt.Errorf("record already exists: %s", record)
 		}
+
+		s.Records = s.Records.Add(record)
+
 	case RecordTypeNS, RecordTypeTXT:
-		records := s.Records[record.Type]
-		records = append(records, record.Value)
-		s.Records[record.Type] = records
+		s.Records = s.Records.Add(record)
 	}
 
 	return nil
@@ -165,13 +149,10 @@ func (s *settings) AddRecord(record Record) error {
 
 func (s *settings) URLValues() url.Values {
 	values := url.Values{}
-	for typ, records := range s.Records {
-		if len(records) == 0 {
-			continue
-		}
 
+	for _, record := range s.Records {
 		var key string
-		switch typ {
+		switch record.Type {
 		case RecordTypeA:
 			key = "update_data_a"
 		case RecordTypeAAAA:
@@ -184,7 +165,13 @@ func (s *settings) URLValues() url.Values {
 			key = "update_data_ns"
 		}
 
-		values.Add(key, strings.Join(records, "\n"))
+		value := values.Get(key)
+		if value == "" {
+			values.Set(key, record.Value)
+		} else {
+			value = strings.Join([]string{value, record.Value}, "\n")
+			values.Set(key, value)
+		}
 	}
 
 	if s.EnableWildcard {
