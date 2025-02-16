@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"terraform-provider-ddnsnow/pkg/ddnsnow"
 	"testing"
 )
@@ -170,8 +171,13 @@ func TestClientCreateRecordFailsWithConflictedRecordExists(t *testing.T) {
 		Type:  ddnsnow.RecordTypeCNAME,
 		Value: "example.com",
 	}
-	if err := client.CreateRecord(record); err == nil {
+
+	actual := client.CreateRecord(record)
+	if actual == nil {
 		t.Fatalf("CreateRecord: expected error, got nil")
+	}
+	if !strings.HasPrefix(actual.Error(), "A/AAAA/TXT record already exists") {
+		t.Fatalf("CreateRecord: unexpected error: %v", actual)
 	}
 }
 
@@ -299,7 +305,12 @@ func TestClientDeleteRecordFailsWhenRecordDoesNotExist(t *testing.T) {
 		Type:  ddnsnow.RecordTypeAAAA,
 		Value: "::1",
 	}
-	if err := client.DeleteRecord(record); err == nil {
+
+	actual := client.DeleteRecord(record)
+	if actual == nil {
 		t.Fatalf("CreateRecord: expected error, got nil")
+	}
+	if !strings.HasPrefix(actual.Error(), "record not found: ") {
+		t.Fatalf("CreateRecord: unexpected error: %v", actual)
 	}
 }
