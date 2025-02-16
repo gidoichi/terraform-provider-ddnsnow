@@ -17,7 +17,7 @@ type settings struct {
 	EnableWildcard bool
 }
 
-func parseSettings(r io.Reader) (*settings, error) {
+func ParseSettings(r io.Reader) (*settings, error) {
 	doc, err := html.Parse(r)
 	if err != nil {
 		return nil, fmt.Errorf("parse html: %w", err)
@@ -81,7 +81,7 @@ func parseSettings(r io.Reader) (*settings, error) {
 	return &settings, nil
 }
 
-func (s *settings) getRecord(record Record) (Record, error) {
+func (s *settings) GetRecord(record Record) (Record, error) {
 	records := s.Records[record.Type]
 
 	switch record.Type {
@@ -108,7 +108,7 @@ func (s *settings) getRecord(record Record) (Record, error) {
 	}
 }
 
-func (s *settings) removeRecord(record Record) error {
+func (s *settings) RemoveRecord(record Record) error {
 	switch record.Type {
 	case RecordTypeA, RecordTypeAAAA, RecordTypeCNAME:
 		if len(s.Records[record.Type]) != 1 {
@@ -135,7 +135,7 @@ func (s *settings) removeRecord(record Record) error {
 	return nil
 }
 
-func (s *settings) addRecord(record Record) error {
+func (s *settings) AddRecord(record Record) error {
 	switch record.Type {
 	case RecordTypeA, RecordTypeAAAA, RecordTypeTXT:
 		if len(s.Records[RecordTypeCNAME]) > 0 {
@@ -154,7 +154,6 @@ func (s *settings) addRecord(record Record) error {
 		} else {
 			return fmt.Errorf("record already exists: %s", record)
 		}
-
 	case RecordTypeNS, RecordTypeTXT:
 		records := s.Records[record.Type]
 		records = append(records, record.Value)
@@ -164,7 +163,7 @@ func (s *settings) addRecord(record Record) error {
 	return nil
 }
 
-func (s *settings) values() url.Values {
+func (s *settings) URLValues() url.Values {
 	values := url.Values{}
 	for typ, records := range s.Records {
 		if len(records) == 0 {

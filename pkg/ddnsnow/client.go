@@ -85,7 +85,7 @@ func (c *client) GetSettings() (*settings, error) {
 	}
 	defer resp.Body.Close()
 
-	return parseSettings(resp.Body)
+	return ParseSettings(resp.Body)
 }
 
 func (c *client) GetRecord(record Record) (Record, error) {
@@ -94,7 +94,7 @@ func (c *client) GetRecord(record Record) (Record, error) {
 		return Record{}, err
 	}
 
-	return settings.getRecord(record)
+	return settings.GetRecord(record)
 }
 
 func (c *client) CreateRecord(record Record) error {
@@ -103,11 +103,11 @@ func (c *client) CreateRecord(record Record) error {
 		return err
 	}
 
-	if err := settings.addRecord(record); err != nil {
+	if err := settings.AddRecord(record); err != nil {
 		return err
 	}
 
-	return c.queryUI(settings.values())
+	return c.queryUI(settings.URLValues())
 }
 
 func (c *client) UpdateRecord(oldRecord, newRecord Record) error {
@@ -120,14 +120,14 @@ func (c *client) UpdateRecord(oldRecord, newRecord Record) error {
 		return err
 	}
 
-	if err := settings.removeRecord(oldRecord); err != nil {
+	if err := settings.RemoveRecord(oldRecord); err != nil {
 		return err
 	}
-	if err := settings.addRecord(newRecord); err != nil {
+	if err := settings.AddRecord(newRecord); err != nil {
 		return err
 	}
 
-	return c.queryUI(settings.values())
+	return c.queryUI(settings.URLValues())
 }
 
 func (c *client) DeleteRecord(record Record) error {
@@ -136,9 +136,9 @@ func (c *client) DeleteRecord(record Record) error {
 		return err
 	}
 
-	if err := settings.removeRecord(record); err != nil {
+	if err := settings.RemoveRecord(record); err != nil {
 		return err
 	}
 
-	return c.queryUI(settings.values())
+	return c.queryUI(settings.URLValues())
 }
