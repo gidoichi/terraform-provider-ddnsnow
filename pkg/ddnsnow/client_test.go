@@ -176,7 +176,7 @@ func TestClientCreateRecordFailsWithConflictedRecordExists(t *testing.T) {
 	if actual == nil {
 		t.Fatalf("CreateRecord: expected error, got nil")
 	}
-	if !strings.HasPrefix(actual.Error(), "A/AAAA/TXT record already exists") {
+	if !strings.HasPrefix(actual.Error(), "add record: conflicted: ") {
 		t.Fatalf("CreateRecord: unexpected error: %v", actual)
 	}
 }
@@ -310,7 +310,7 @@ func TestClientDeleteRecordFailsWhenRecordDoesNotExist(t *testing.T) {
 	if actual == nil {
 		t.Fatalf("CreateRecord: expected error, got nil")
 	}
-	if !strings.HasPrefix(actual.Error(), "record not found: ") {
+	if !strings.HasPrefix(actual.Error(), "remove record: not found: ") {
 		t.Fatalf("CreateRecord: unexpected error: %v", actual)
 	}
 }

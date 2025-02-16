@@ -3,6 +3,8 @@
 
 package ddnsnow
 
+import "fmt"
+
 type RecordType string
 
 var (
@@ -55,7 +57,7 @@ func (rs Records) RemoveOne(record Record) (Records, error) {
 	}
 
 	if removed == 0 {
-		return nil, fmt.Errorf("record not found: %s", record)
+		return nil, fmt.Errorf("not found: %s", record)
 	}
 
 	return records, nil

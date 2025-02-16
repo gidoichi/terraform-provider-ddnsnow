@@ -4,6 +4,7 @@
 package ddnsnow
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -15,7 +16,50 @@ import (
 type settings struct {
 	Records        Records
 	EnableWildcard bool
+	validators     []recordsValidator
 }
+
+type recordsValidator func(Records) error
+
+var (
+	violationMultipleRecordsForSomeTypes recordsValidator = func(records Records) error {
+		typeToRecords := map[RecordType][]Record{}
+
+		for _, record := range records {
+			typeToRecords[record.Type] = append(typeToRecords[record.Type], record)
+		}
+
+		var errs error
+		for recordType, records := range typeToRecords {
+			switch recordType {
+			case RecordTypeA, RecordTypeAAAA, RecordTypeCNAME:
+				if len(records) >= 2 {
+					errs = errors.Join(errs, fmt.Errorf("multiple records of type %s", recordType))
+				}
+			}
+		}
+
+		return errs
+	}
+
+	violationConflictedRecords recordsValidator = func(records Records) error {
+		cname := records.Filter(func(r Record) bool {
+			return r.Type == RecordTypeCNAME
+		})
+		if len(cname) == 0 {
+			return nil
+		}
+
+		conflicted := records.Filter(func(r Record) bool {
+			return r.Type == RecordTypeA || r.Type == RecordTypeAAAA || r.Type == RecordTypeTXT
+		})
+		if len(conflicted) == 0 {
+			return nil
+		}
+
+		return fmt.Errorf("conflicted: %v", append(conflicted, cname...))
+	}
+)
 
 func ParseSettings(r io.Reader) (*settings, error) {
 	doc, err := html.Parse(r)
@@ -80,6 +124,11 @@ func ParseSettings(r io.Reader) (*settings, error) {
 		}
 	}
 
+	settings.validators = []recordsValidator{
+		violationMultipleRecordsForSomeTypes,
+		violationConflictedRecords,
+	}
+
 	return &settings, nil
 }
 
@@ -100,51 +149,39 @@ func (s *settings) GetRecord(record Record) (Record, error) {
 }
 
 func (s *settings) RemoveRecord(record Record) error {
-	records, err := s.Records.RemoveOne(record)
+	updated, err := s.Records.RemoveOne(record)
 	if err != nil {
 		return fmt.Errorf("remove record: %w", err)
 	}
+	if err := s.validateRecords(updated); err != nil {
+		return fmt.Errorf("remove record: %w", err)
+	}
 
-	s.Records = records
+	s.Records = updated
 
 	return nil
 }
 
 func (s *settings) AddRecord(record Record) error {
-	switch record.Type {
-	case RecordTypeA, RecordTypeAAAA, RecordTypeTXT:
-		records := s.Records.Filter(func(r Record) bool {
-			return r.Type == RecordTypeCNAME
-		})
-		if len(records) > 0 {
-			return fmt.Errorf("CNAME record already exists")
-		}
-
-	case RecordTypeCNAME:
-		records := s.Records.Filter(func(r Record) bool {
-			return r.Type == RecordTypeA || r.Type == RecordTypeAAAA || r.Type == RecordTypeTXT
-		})
-		if len(records) > 0 {
-			return fmt.Errorf("A/AAAA/TXT record already exists")
-		}
+	updated := s.Records.Add(record)
+	if err := s.validateRecords(updated); err != nil {
+		return fmt.Errorf("add record: %w", err)
 	}
 
-	switch record.Type {
-	case RecordTypeA, RecordTypeAAAA, RecordTypeCNAME:
-		exists := s.Records.Filter(func(r Record) bool {
-			return r.Type == record.Type
-		})
-		if len(exists) != 0 {
-			return fmt.Errorf("record already exists: %s", record)
-		}
-
-		s.Records = s.Records.Add(record)
-
-	case RecordTypeNS, RecordTypeTXT:
-		s.Records = s.Records.Add(record)
-	}
+	s.Records = updated
 
 	return nil
+}
+
+func (s settings) validateRecords(records Records) error {
+	var errs error
+	for _, valid := range s.validators {
+		if err := valid(records); err != nil {
+			errs = errors.Join(errs, err)
+		}
+	}
+
+	return errs
 }
 
 func (s *settings) URLValues() url.Values {
